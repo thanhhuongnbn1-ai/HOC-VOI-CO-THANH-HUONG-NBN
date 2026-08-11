@@ -253,6 +253,8 @@ const app = {
         const roleTabs = document.getElementById('loginRoleTabs');
         const regFields = document.getElementById('registerFields');
         const btnSubmit = document.getElementById('btnAuthSubmit');
+        const fieldUsername = document.getElementById('fieldUsername');
+        const fieldPassword = document.getElementById('fieldPassword');
 
         if (mode === 'register') {
             title.textContent = 'ĐĂNG KÝ THÔNG TIN HỌC THỬ MIỄN PHÍ';
@@ -260,15 +262,27 @@ const app = {
             regFields.classList.remove('hidden');
             btnSubmit.textContent = 'GỬI ĐĂNG KÝ HỌC THỬ';
             
-            // Hide Username field, use FullName & Phone
-            document.getElementById('fieldUsername').classList.add('hidden');
+            // Hide Login Username & Password fields for Register Mode
+            fieldUsername.classList.add('hidden');
+            fieldPassword.classList.add('hidden');
+            document.getElementById('authUsername').required = false;
             document.getElementById('authPassword').required = false;
+
+            document.getElementById('regFullName').required = true;
+            document.getElementById('regPhone').required = true;
         } else {
             title.textContent = 'CỔNG ĐĂNG NHẬP HỆ THỐNG';
             roleTabs.classList.remove('hidden');
             regFields.classList.add('hidden');
-            document.getElementById('fieldUsername').classList.remove('hidden');
+            
+            fieldUsername.classList.remove('hidden');
+            fieldPassword.classList.remove('hidden');
+            document.getElementById('authUsername').required = true;
             document.getElementById('authPassword').required = true;
+
+            document.getElementById('regFullName').required = false;
+            document.getElementById('regPhone').required = false;
+            
             this.switchAuthRole(this.state.authRole || 'student');
         }
 
