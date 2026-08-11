@@ -1,0 +1,100 @@
+/* ==========================================================================
+   MATHX ENTERPRISE WEB APP - DESIGN SYSTEM & STYLESHEET
+   Dựa trên Sơ đồ Cấu trúc 4 Tầng & Ngôn ngữ Thiết kế Tham chiếu
+   ========================================================================== */
+
+/* Design Tokens (CSS Variables - Biến Thiết Kế Toàn Cục) */
+:root {
+    --brand-orange: #F25123;
+    --brand-purple: #9177F8;
+    --brand-cyan: #00A6E6;
+    --brand-green: #60B731;
+    --brand-indigo: #7367F0;
+    --brand-red: #FF4C51;
+    --surface-light: #FFFFFF;
+    --surface-dark: #0F172A;
+    --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+    --font-display: 'Montserrat', system-ui, -apple-system, sans-serif;
+}
+
+/* Base resets & Glassmorphism helpers */
+body {
+    font-family: var(--font-sans);
+    overflow-x: hidden;
+}
+
+/* Glassmorphism Effect */
+.glass-effect {
+    background: rgba(255, 255, 255, 0.75);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.dark .glass-effect {
+    background: rgba(15, 23, 42, 0.75);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Custom Active State for Grade Filter Buttons */
+.grade-tab-btn.active {
+    background-color: var(--brand-orange) !important;
+    color: #FFFFFF !important;
+    border-color: var(--brand-orange) !important;
+    box-shadow: 0 4px 12px rgba(242, 81, 35, 0.3);
+}
+
+/* Smooth Grade Card Hover Transitions */
+.grade-card {
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.grade-card:hover {
+    transform: translateY(-6px);
+}
+
+/* Custom Scrollbar Styling */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(15, 23, 42, 0.05);
+}
+
+.dark ::-webkit-scrollbar-track {
+    background: rgba(15, 23, 42, 0.5);
+}
+
+::-webkit-scrollbar-thumb {
+    background: #CBD5E1;
+    border-radius: 9999px;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+    background: #334155;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--brand-orange);
+}
+
+/* Pulse Glow Animation for High Priority Highlights */
+@keyframes glowPulse {
+    0%, 100% {
+        box-shadow: 0 0 15px rgba(242, 81, 35, 0.3);
+    }
+    50% {
+        box-shadow: 0 0 25px rgba(242, 81, 35, 0.6);
+    }
+}
+
+.glow-active {
+    animation: glowPulse 2.5s infinite ease-in-out;
+}
+
+/* Typography Headings Utility */
+h1, h2, h3, .font-display {
+    font-family: var(--font-display);
+}
