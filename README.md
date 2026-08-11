@@ -7,14 +7,14 @@ Hệ thống Website Giáo Dục Trực Tuyến MATHX chuẩn Enterprise đượ
 ## 🏛️ 1. Cấu Trúc 4 Tầng Thông Tin (4-Tier Information Architecture)
 
 1. **Tầng 1 (Global Shell / Header & Navigation):**
-   - Topbar Tiện ích (Hotline `0912.698.216`, Thanh toán, Hướng dẫn học, CDN Cloudflare Badge, Dark/Light Mode toggle).
+   - Topbar Tiện ích (Hotline `0932.474.173`, Thanh toán, Hướng dẫn học, CDN Cloudflare Badge, Dark/Light Mode toggle).
    - Brand Identity (Logo MATHX Gradient, Slogan "Thích học toán - Giỏi tư duy").
    - Mega Menu & Navigation (Giới thiệu, Học toán Mầm Nông - Lớp 5, Toán Vui, Thi Thử AI, Kỳ Thi Olympic, Kho Tài Liệu, Sơ Đồ Kiến Trúc).
    - Quick Search bar & Chế độ Đăng nhập Phụ huynh/Học sinh.
 
 2. **Tầng 2 (Hero & High-Level Overview):**
    - Dynamic Hero Section với Banner Glassmorphism 3D.
-   - Trích dẫn cảm hứng từ Thầy Trần Hữu Hiếu.
+   - Trích dẫn cảm hứng từ Cô THANH HƯƠNG - Cùng con vươn ra thế giới.
    - Value Proposition Pills (Tương tác direct 1-1, Giáo trình chất lượng, Sát sao đánh giá).
    - Key Metrics & Stat Board (50,000+ Học sinh, 98.4% Đạt điểm giỏi, 1,200+ Đề thi AI, 99.99% Uptime).
    - Primary Interactive CTAs.
@@ -31,7 +31,7 @@ Hệ thống Website Giáo Dục Trực Tuyến MATHX chuẩn Enterprise đượ
    - Dynamic Sitemap phân loại theo Chương trình học và Kỳ thi.
    - Form đăng ký Email nhận đề thi hàng tuần.
    - Legal/Compliance (Bảo mật thông tin trẻ em COPPA & GDPR).
-   - System Health Anchor & Hotline 0912.698.216.
+   - System Health Anchor & Hotline 0932.474.173.
 
 ---
 
