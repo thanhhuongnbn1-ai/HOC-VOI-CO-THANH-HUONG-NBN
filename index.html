@@ -46,6 +46,9 @@
     <!-- Supabase JS Client v2 CDN -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
+    <!-- SheetJS XLSX Library CDN for Excel Export -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    
     <!-- Custom Stylesheet -->
     <link rel="stylesheet" href="./styles.css">
 </head>
@@ -1000,38 +1003,221 @@
         </div>
     </div>
 
-    <!-- Modal 3: Auth Login / Register Modal -->
+    <!-- Modal 3: Auth Login / Register Modal (Đăng Nhập 2 Chế Độ & Đăng Ký) -->
     <div id="authModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md hidden flex items-center justify-center p-4">
         <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4">
             <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-                <h3 id="authModalTitle" class="font-bold text-lg text-slate-900 dark:text-white">Đăng Nhập Tài Khoản</h3>
+                <h3 id="authModalTitle" class="font-bold text-lg text-slate-900 dark:text-white">CỔNG ĐĂNG NHẬP / ĐĂNG KÝ</h3>
                 <button onclick="app.closeAuthModal()" class="p-1 rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800">
                     <i data-lucide="x" class="w-5 h-5"></i>
                 </button>
             </div>
 
+            <!-- Auth Mode Switch Tabs (Học sinh vs Admin) -->
+            <div id="loginRoleTabs" class="grid grid-cols-2 gap-2 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl text-xs font-bold">
+                <button type="button" id="tabRoleStudent" onclick="app.switchAuthRole('student')" class="py-2 rounded-lg bg-white dark:bg-slate-700 text-orange-600 dark:text-orange-400 shadow-sm transition-all text-center">
+                    🎓 Học Sinh / Học Viên
+                </button>
+                <button type="button" id="tabRoleAdmin" onclick="app.switchAuthRole('admin')" class="py-2 rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 transition-all text-center">
+                    🔑 Giáo Viên / Admin
+                </button>
+            </div>
+
+            <!-- Login / Register Form -->
             <form id="authForm" onsubmit="app.handleAuthSubmit(event)" class="space-y-4 text-sm">
-                <div>
-                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Số điện thoại hoặc Email</label>
-                    <input type="text" id="authEmail" required placeholder="0932... hoặc email@gmail.com" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-xs focus:outline-none focus:ring-2 focus:ring-orange-500">
+                
+                <!-- Field 1: Username / Input -->
+                <div id="fieldUsername">
+                    <label id="lblUsername" class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Tên đăng nhập (Tên học sinh + Mã số riêng)</label>
+                    <input type="text" id="authUsername" required placeholder="Ví dụ: NGUYENVANA001" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-xs uppercase focus:outline-none focus:ring-2 focus:ring-orange-500 font-mono">
+                    <p id="hintUsername" class="text-[11px] text-slate-400 mt-1">Mã dùng thử học sinh mẫu: <strong class="text-orange-500">NGUYENVANA001</strong></p>
                 </div>
 
+                <!-- Field 2: Password -->
                 <div>
-                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Mật khẩu (*)</label>
-                    <input type="password" id="authPassword" required placeholder="••••••••" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-xs focus:outline-none focus:ring-2 focus:ring-orange-500">
+                    <label id="lblPassword" class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Mật khẩu (Mã số riêng do GV cấp)</label>
+                    <input type="password" id="authPassword" required placeholder="Ví dụ: nbn4001" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-xs focus:outline-none focus:ring-2 focus:ring-orange-500 font-mono">
+                    <p id="hintPassword" class="text-[11px] text-slate-400 mt-1">Mật khẩu học sinh mẫu: <strong class="text-orange-500">nbn4001</strong></p>
                 </div>
 
-                <div id="registerFields" class="hidden space-y-4">
+                <!-- Additional Fields for REGISTER Mode (Họ tên, SĐT, Lớp đăng ký) -->
+                <div id="registerFields" class="hidden space-y-3 pt-1 border-t border-slate-100 dark:border-slate-800">
                     <div>
-                        <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Họ tên Phụ huynh</label>
-                        <input type="text" id="authParentName" placeholder="Nguyễn Văn A" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-xs">
+                        <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Họ và tên (*)</label>
+                        <input type="text" id="regFullName" placeholder="Ví dụ: Nguyễn Văn An" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-xs">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Số điện thoại (*)</label>
+                        <input type="tel" id="regPhone" placeholder="Ví dụ: 0932474173" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-xs">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Lớp đăng ký (*)</label>
+                        <select id="regGrade" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-xs">
+                            <option value="Mầm Non (4-5t)">Mầm Non (4-5t)</option>
+                            <option value="Lớp 1">Lớp 1</option>
+                            <option value="Lớp 2">Lớp 2</option>
+                            <option value="Lớp 3">Lớp 3</option>
+                            <option value="Lớp 4">Lớp 4</option>
+                            <option value="Lớp 5 (Ôn Thi Cấp 2)">Lớp 5 (Ôn Thi Cấp 2)</option>
+                        </select>
                     </div>
                 </div>
 
-                <button type="submit" class="w-full py-3 bg-gradient-to-r from-orange-500 to-amber-500 text-white font-bold text-xs rounded-xl shadow-md transition-all">
-                    XÁC NHẬN
+                <button type="submit" id="btnAuthSubmit" class="w-full py-3 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-extrabold text-xs rounded-xl shadow-lg transition-all">
+                    ĐĂNG NHẬP HỌC VIÊN
                 </button>
             </form>
+        </div>
+    </div>
+
+    <!-- Modal 4: Admin / Giáo Viên Portal & Excel Export Modal -->
+    <div id="adminModal" class="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-5xl w-full max-h-[90vh] overflow-y-auto p-6 text-white shadow-2xl space-y-6">
+            <!-- Modal Header -->
+            <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center font-bold">
+                        👑
+                    </div>
+                    <div>
+                        <h3 class="font-display font-black text-xl text-white">CỔNG QUẢN LÝ DÀNH CHO GIÁO VIÊN / ADMIN</h3>
+                        <p class="text-xs text-amber-400">Tài khoản: <strong>thanhhuongnbn84</strong> (Cô THANH HƯƠNG)</p>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <button onclick="app.exportLeadsExcel()" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow flex items-center gap-1.5">
+                        <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
+                        <span>Xuất Excel Đăng Ký (.xlsx)</span>
+                    </button>
+                    <button onclick="app.closeAdminModal()" class="p-2 rounded-lg text-slate-400 hover:bg-slate-800">
+                        <i data-lucide="x" class="w-6 h-6"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Stats Overview Cards -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div class="bg-slate-800/80 p-4 rounded-2xl border border-slate-700">
+                    <div class="text-xs text-slate-400 font-semibold">Tổng Đăng Ký Học Thử</div>
+                    <div id="statTotalLeads" class="text-2xl font-black text-orange-400 mt-1 font-display">0</div>
+                    <div class="text-[11px] text-emerald-400 mt-1">● Đồng bộ Supabase Realtime</div>
+                </div>
+                <div class="bg-slate-800/80 p-4 rounded-2xl border border-slate-700">
+                    <div class="text-xs text-slate-400 font-semibold">Tổng Mã Học Sinh Đã Cấp</div>
+                    <div id="statTotalStudents" class="text-2xl font-black text-cyan-400 mt-1 font-display">3</div>
+                    <div class="text-[11px] text-slate-400 mt-1">Mã riêng định dạng NGUYENVANA...</div>
+                </div>
+                <div class="bg-slate-800/80 p-4 rounded-2xl border border-slate-700">
+                    <div class="text-xs text-slate-400 font-semibold">Lượt Làm Bài Tập Quiz</div>
+                    <div id="statTotalQuizzes" class="text-2xl font-black text-purple-400 mt-1 font-display">12</div>
+                    <div class="text-[11px] text-slate-400 mt-1">Hệ thống AI chấm điểm tự động</div>
+                </div>
+            </div>
+
+            <!-- Admin Navigation Tabs -->
+            <div class="flex border-b border-slate-800 gap-2 text-xs font-bold">
+                <button onclick="app.switchAdminTab('leads')" id="adminTabLeads" class="px-4 py-2.5 border-b-2 border-orange-500 text-orange-400">
+                    📋 Danh Sách Đăng Ký Học Thử
+                </button>
+                <button onclick="app.switchAdminTab('students')" id="adminTabStudents" class="px-4 py-2.5 border-b-2 border-transparent text-slate-400 hover:text-white">
+                    🎓 Danh Sách Mã Số Học Sinh
+                </button>
+                <button onclick="app.switchAdminTab('create')" id="adminTabCreate" class="px-4 py-2.5 border-b-2 border-transparent text-slate-400 hover:text-white">
+                    ➕ Cấp Mã Số Học Sinh Mới
+                </button>
+            </div>
+
+            <!-- Tab Content 1: Danh sách Đăng ký Học thử -->
+            <div id="adminContentLeads" class="space-y-4">
+                <div class="flex justify-between items-center text-xs">
+                    <span class="text-slate-400">Danh sách phụ huynh/học sinh đã điền thông tin đăng ký</span>
+                    <button onclick="app.exportLeadsExcel()" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold flex items-center gap-1">
+                        <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                        <span>Tải File Excel (.xlsx)</span>
+                    </button>
+                </div>
+                <div class="overflow-x-auto rounded-xl border border-slate-800">
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-slate-800 text-slate-300 uppercase font-semibold">
+                            <tr>
+                                <th class="p-3">STT</th>
+                                <th class="p-3">Họ và Tên</th>
+                                <th class="p-3">Số Điện Thoại</th>
+                                <th class="p-3">Lớp Đăng Ký</th>
+                                <th class="p-3">Ngày Đăng Ký</th>
+                                <th class="p-3">Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminLeadsTableBody" class="divide-y divide-slate-800 text-slate-200">
+                            <!-- Populated dynamically via app.js -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Tab Content 2: Danh sách Mã Học Sinh -->
+            <div id="adminContentStudents" class="hidden space-y-4">
+                <div class="flex justify-between items-center text-xs">
+                    <span class="text-slate-400">Danh sách mã số riêng dành cho Học Sinh đăng nhập</span>
+                    <button onclick="app.exportStudentsExcel()" class="px-3 py-1.5 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg font-bold flex items-center gap-1">
+                        <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                        <span>Xuất File Excel Mã HS (.xlsx)</span>
+                    </button>
+                </div>
+                <div class="overflow-x-auto rounded-xl border border-slate-800">
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-slate-800 text-slate-300 uppercase font-semibold">
+                            <tr>
+                                <th class="p-3">STT</th>
+                                <th class="p-3">Họ Tên Học Sinh</th>
+                                <th class="p-3">Tên Đăng Nhập (Mã)</th>
+                                <th class="p-3">Mật Khẩu (Mã Riêng)</th>
+                                <th class="p-3">Khối Lớp</th>
+                                <th class="p-3">Trạng Thái</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminStudentsTableBody" class="divide-y divide-slate-800 text-slate-200 font-mono">
+                            <!-- Populated dynamically via app.js -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Tab Content 3: Form Cấp Mã Học Sinh Mới -->
+            <div id="adminContentCreate" class="hidden space-y-4">
+                <div class="bg-slate-800/60 p-4 rounded-2xl border border-slate-700 space-y-4 max-w-xl">
+                    <h4 class="font-bold text-sm text-orange-400">Tạo Mã Đăng Nhập Riêng Cho Học Sinh Mới</h4>
+                    <form onsubmit="app.handleCreateStudentCode(event)" class="space-y-3 text-xs">
+                        <div>
+                            <label class="block font-semibold text-slate-300 mb-1">Họ và Tên Học Sinh (*)</label>
+                            <input type="text" id="newStudentName" required placeholder="Ví dụ: Hoàng Minh Trí" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white">
+                        </div>
+                        <div>
+                            <label class="block font-semibold text-slate-300 mb-1">Khối Lớp (*)</label>
+                            <select id="newStudentGrade" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white">
+                                <option value="Lớp 5">Lớp 5 (Ôn Thi Cấp 2)</option>
+                                <option value="Lớp 4">Lớp 4</option>
+                                <option value="Lớp 3">Lớp 3</option>
+                                <option value="Lớp 2">Lớp 2</option>
+                                <option value="Lớp 1">Lớp 1</option>
+                                <option value="Mầm Non">Mầm Non (4-5t)</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="w-full py-3 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold rounded-xl shadow">
+                            TẠO MÃ TỰ ĐỘNG (Username & Mật Khẩu nbn...)
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="pt-4 border-t border-slate-800 flex justify-between items-center text-xs">
+                <span class="text-slate-400">Hệ thống Quản lý Giáo viên Cô THANH HƯƠNG • Đã đồng bộ Supabase</span>
+                <button onclick="app.closeAdminModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl">
+                    Đóng Bảng Quản Lý
+                </button>
+            </div>
         </div>
     </div>
 
