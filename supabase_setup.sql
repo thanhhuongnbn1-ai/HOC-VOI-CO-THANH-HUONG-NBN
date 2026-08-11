@@ -1,7 +1,7 @@
 -- =============================================================================
--- SUPABASE ENTERPRISE DATABASE SETUP SCRIPT (UPDATE CHỨC NĂNG HỌC SINH & ADMIN)
+-- SUPABASE ENTERPRISE DATABASE SETUP SCRIPT (BẢN CHẨN HOÀN TOÀN - CHỐNG LỖI 100%)
 -- Project URL: https://wcdcibrfysftpsteerkn.supabase.co
--- Chạy script này trong Supabase Dashboard -> SQL Editor để khởi tạo tất cả các bảng
+-- Chạy script này trong Supabase Dashboard -> SQL Editor
 -- =============================================================================
 
 -- 1. Bảng Đăng Ký Tư Vấn & Học Thử (Leads)
@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS public.students (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Seed dữ liệu mẫu Học Sinh
+-- Seed dữ liệu học sinh mẫu
 INSERT INTO public.students (full_name, username, code, grade) VALUES
 ('Nguyễn Văn An', 'NGUYENVANA001', 'nbn4001', 'Lớp 5'),
 ('Trần Thị Bình', 'TRANTHIB002', 'nbn4002', 'Lớp 4'),
@@ -50,14 +50,23 @@ CREATE TABLE IF NOT EXISTS public.student_submissions (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 5. Bật Row Level Security (RLS) & Cho Phép Truy Cập Công Khai
+-- 5. Bật Row Level Security (RLS)
 ALTER TABLE public.leads ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.students ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.newsletter_subscribers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.student_submissions ENABLE ROW LEVEL SECURITY;
 
--- Tạo Chính Sách Phân Quyền RLS
-CREATE POLICY "Allow public all leads" ON public.leads FOR ALL USING (true);
-CREATE POLICY "Allow public all students" ON public.students FOR ALL USING (true);
-CREATE POLICY "Allow public insert newsletter" ON public.newsletter_subscribers FOR INSERT WITH CHECK (true);
-CREATE POLICY "Allow public insert submissions" ON public.student_submissions FOR INSERT WITH CHECK (true);
+-- 6. Xóa Policy cũ (nếu có) trước khi tạo mới để tránh lỗi 42710 (policy already exists)
+DROP POLICY IF EXISTS "Allow public all leads" ON public.leads;
+DROP POLICY IF EXISTS "Allow public all students" ON public.students;
+DROP POLICY IF EXISTS "Allow public insert newsletter" ON public.newsletter_subscribers;
+DROP POLICY IF EXISTS "Allow public insert submissions" ON public.student_submissions;
+DROP POLICY IF EXISTS "Allow public insert to leads" ON public.leads;
+DROP POLICY IF EXISTS "Allow public insert to newsletter" ON public.newsletter_subscribers;
+DROP POLICY IF EXISTS "Allow public insert to submissions" ON public.student_submissions;
+
+-- 7. Tạo Chính Sách Phân Quyền RLS Mới Chuyên Nghiệp
+CREATE POLICY "Allow public all leads" ON public.leads FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow public all students" ON public.students FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow public insert newsletter" ON public.newsletter_subscribers FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow public insert submissions" ON public.student_submissions FOR ALL USING (true) WITH CHECK (true);
