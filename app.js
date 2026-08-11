@@ -256,11 +256,14 @@ const app = {
         const fieldUsername = document.getElementById('fieldUsername');
         const fieldPassword = document.getElementById('fieldPassword');
 
+        const quickDemoButtons = document.getElementById('quickDemoButtons');
+
         if (mode === 'register') {
             title.textContent = 'ĐĂNG KÝ THÔNG TIN HỌC THỬ MIỄN PHÍ';
             roleTabs.classList.add('hidden');
             regFields.classList.remove('hidden');
             btnSubmit.textContent = 'GỬI ĐĂNG KÝ HỌC THỬ';
+            if (quickDemoButtons) quickDemoButtons.classList.add('hidden');
             
             // Hide Login Username & Password fields for Register Mode
             fieldUsername.classList.add('hidden');
@@ -274,6 +277,7 @@ const app = {
             title.textContent = 'CỔNG ĐĂNG NHẬP HỆ THỐNG';
             roleTabs.classList.remove('hidden');
             regFields.classList.add('hidden');
+            if (quickDemoButtons) quickDemoButtons.classList.remove('hidden');
             
             fieldUsername.classList.remove('hidden');
             fieldPassword.classList.remove('hidden');
@@ -287,6 +291,21 @@ const app = {
         }
 
         modal.classList.remove('hidden');
+    },
+
+    // 1-Click Auto Login Helpers
+    autoLoginStudent() {
+        this.switchAuthRole('student');
+        document.getElementById('authUsername').value = 'NGUYENVANA001';
+        document.getElementById('authPassword').value = 'nbn4001';
+        document.getElementById('authForm').dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+    },
+
+    autoLoginAdmin() {
+        this.switchAuthRole('admin');
+        document.getElementById('authUsername').value = 'thanhhuongnbn84';
+        document.getElementById('authPassword').value = '246357';
+        document.getElementById('authForm').dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
     },
 
     closeAuthModal() {
