@@ -1,31 +1,44 @@
 /**
  * MATHX ENTERPRISE WEB APPLICATION ENGINE
- * Tích hợp Supabase Realtime Database & Auth API
- * Project URL: https://wcdcibrfysftpsteerkn.supabase.co
+ * Quản lý Đăng Nhập 2 Chế Độ (Học sinh & Admin), Đăng Ký, Quản Lý Giáo Viên & Xuất Excel
+ * Supabase Project URL: https://wcdcibrfysftpsteerkn.supabase.co
  */
 
-// Supabase Configuration Tokens
+// Supabase Configuration
 const SUPABASE_URL = 'https://wcdcibrfysftpsteerkn.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndjZGNpYnJmeXNmdHBzdGVlcmtuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzOTQ1MzgsImV4cCI6MjEwMTk3MDUzOH0.GA1B3eTeb4NzblQGpQ7aPIRzoPYYOQhLa2A0LBXulnM';
 
-// Initialize Supabase Client
 const supabase = (window.supabase && window.supabase.createClient) 
     ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) 
     : null;
 
 const app = {
-    // Current State (Trạng thái ứng dụng)
+    // Application State
     state: {
         theme: localStorage.getItem('mathx_theme') || 'light',
         activeGradeFilter: 'all',
-        isAuthOpen: false,
+        authRole: 'student', // 'student' | 'admin'
         authMode: 'login', // 'login' | 'register'
         currentQuiz: null,
         selectedAnswer: null,
-        user: null
+        currentUser: null,
+        
+        // Mock Lead Registrations
+        leads: [
+            { id: 1, name: 'Nguyễn Văn An', phone: '0932474173', grade: 'Lớp 5 (Ôn Thi Cấp 2)', created_at: '2026-08-11 09:30' },
+            { id: 2, name: 'Trần Thị Bình', phone: '0912345678', grade: 'Lớp 4', created_at: '2026-08-11 10:15' },
+            { id: 3, name: 'Lê Văn Phúc', phone: '0988776655', grade: 'Lớp 3', created_at: '2026-08-11 10:45' }
+        ],
+
+        // Pre-configured Student Credentials (Tên đăng nhập & Mật khẩu mã số riêng)
+        students: [
+            { id: 1, name: 'Nguyễn Văn An', username: 'NGUYENVANA001', code: 'nbn4001', grade: 'Lớp 5', status: 'Hoạt động' },
+            { id: 2, name: 'Trần Thị Bình', username: 'TRANTHIB002', code: 'nbn4002', grade: 'Lớp 4', status: 'Hoạt động' },
+            { id: 3, name: 'Lê Văn Phúc', username: 'LEVANP003', code: 'nbn4003', grade: 'Lớp 3', status: 'Hoạt động' }
+        ]
     },
 
-    // Sample Interactive Quizzes Mock Data
+    // Quizzes Mock Data
     quizzes: {
         'Thách thức IQ Hôm nay': {
             question: 'Tìm số tiếp theo trong dãy: 2, 6, 12, 20, 30, ...?',
@@ -92,14 +105,23 @@ const app = {
     // Initialization
     async init() {
         this.applyTheme(this.state.theme);
-        console.log('⚡ Supabase Client initialized with Project URL:', SUPABASE_URL);
-
-        // Check Supabase Auth Session
+        console.log('⚡ MATHX Enterprise App Engine Initialized!');
+        
+        // Fetch Realtime Leads from Supabase if connected
         if (supabase) {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (session?.user) {
-                this.state.user = session.user;
-                this.updateUserUI(session.user.email);
+            try {
+                const { data, error } = await supabase.from('leads').select('*').order('created_at', { ascending: false });
+                if (data && data.length > 0) {
+                    this.state.leads = data.map(item => ({
+                        id: item.id,
+                        name: item.parent_name || 'Học sinh',
+                        phone: item.phone || '',
+                        grade: item.grade || 'Mầm Non',
+                        created_at: new Date(item.created_at).toLocaleString('vi-VN')
+                    }));
+                }
+            } catch (err) {
+                console.warn('Notice loading leads:', err.message);
             }
         }
     },
@@ -119,7 +141,7 @@ const app = {
         }
     },
 
-    // Grade Filtering
+    // Grade Category Filtering
     filterGrade(category) {
         this.state.activeGradeFilter = category;
         const buttons = document.querySelectorAll('.grade-tab-btn');
@@ -142,7 +164,7 @@ const app = {
         });
     },
 
-    // Drawers & Modals
+    // Navigation Drawers
     toggleMobileDrawer() {
         const drawer = document.getElementById('mobileDrawer');
         if (drawer) drawer.classList.toggle('hidden');
@@ -153,6 +175,7 @@ const app = {
         if (modal) modal.classList.toggle('hidden');
     },
 
+    // Interactive Quiz Exercise Modal
     openExerciseModal(quizName) {
         const modal = document.getElementById('exerciseModal');
         const titleEl = document.getElementById('quizTitle');
@@ -207,7 +230,7 @@ const app = {
             feedbackEl.innerHTML = `❌ RẤT TIẾC! Đáp án chính xác là <strong>${String.fromCharCode(65 + quiz.correct)}. ${quiz.options[quiz.correct]}</strong>.<br><span class="font-normal mt-1 block">${quiz.explanation}</span>`;
         }
 
-        // Sync Submission Result to Supabase Database
+        // Sync Submission to Supabase
         if (supabase) {
             try {
                 await supabase.from('student_submissions').insert([{
@@ -216,26 +239,37 @@ const app = {
                     is_correct: isCorrect,
                     points: isCorrect ? 10 : 0
                 }]);
-                console.log('⚡ Saved quiz submission to Supabase');
             } catch (err) {
-                console.warn('Supabase sync notice:', err.message);
+                console.warn('Sync quiz notice:', err.message);
             }
         }
     },
 
-    // Auth Modal Logic with Supabase Auth
+    // AUTH & ROLE SWITCHING LOGIC (Đăng Nhập Học Sinh vs Admin / Đăng Ký)
     openAuthModal(mode = 'login') {
         this.state.authMode = mode;
         const modal = document.getElementById('authModal');
         const title = document.getElementById('authModalTitle');
+        const roleTabs = document.getElementById('loginRoleTabs');
         const regFields = document.getElementById('registerFields');
+        const btnSubmit = document.getElementById('btnAuthSubmit');
 
         if (mode === 'register') {
-            title.textContent = 'Đăng Ký Tài Khoản Học Sinh/Phụ Huynh';
+            title.textContent = 'ĐĂNG KÝ THÔNG TIN HỌC THỬ MIỄN PHÍ';
+            roleTabs.classList.add('hidden');
             regFields.classList.remove('hidden');
+            btnSubmit.textContent = 'GỬI ĐĂNG KÝ HỌC THỬ';
+            
+            // Hide Username field, use FullName & Phone
+            document.getElementById('fieldUsername').classList.add('hidden');
+            document.getElementById('authPassword').required = false;
         } else {
-            title.textContent = 'Đăng Nhập MATHX';
+            title.textContent = 'CỔNG ĐĂNG NHẬP HỆ THỐNG';
+            roleTabs.classList.remove('hidden');
             regFields.classList.add('hidden');
+            document.getElementById('fieldUsername').classList.remove('hidden');
+            document.getElementById('authPassword').required = true;
+            this.switchAuthRole(this.state.authRole || 'student');
         }
 
         modal.classList.remove('hidden');
@@ -246,89 +280,352 @@ const app = {
         if (modal) modal.classList.add('hidden');
     },
 
+    // Switch between Student Role & Admin Role
+    switchAuthRole(role) {
+        this.state.authRole = role;
+        const tabStudent = document.getElementById('tabRoleStudent');
+        const tabAdmin = document.getElementById('tabRoleAdmin');
+        const lblUsername = document.getElementById('lblUsername');
+        const hintUsername = document.getElementById('hintUsername');
+        const lblPassword = document.getElementById('lblPassword');
+        const hintPassword = document.getElementById('hintPassword');
+        const usernameInput = document.getElementById('authUsername');
+        const passwordInput = document.getElementById('authPassword');
+        const btnSubmit = document.getElementById('btnAuthSubmit');
+
+        if (role === 'admin') {
+            tabAdmin.className = 'py-2 rounded-lg bg-white dark:bg-slate-700 text-amber-500 dark:text-amber-400 shadow-sm transition-all text-center';
+            tabStudent.className = 'py-2 rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 transition-all text-center';
+            
+            lblUsername.textContent = 'Tên đăng nhập Admin/Giáo viên';
+            usernameInput.placeholder = 'thanhhuongnbn84';
+            usernameInput.value = 'thanhhuongnbn84';
+            hintUsername.innerHTML = 'Tài khoản Giáo viên: <strong class="text-amber-500">thanhhuongnbn84</strong>';
+
+            lblPassword.textContent = 'Mật khẩu Admin/Giáo viên';
+            passwordInput.placeholder = '246357';
+            passwordInput.value = '246357';
+            hintPassword.innerHTML = 'Mật khẩu Giáo viên: <strong class="text-amber-500">246357</strong>';
+
+            btnSubmit.textContent = '🔑 ĐĂNG NHẬP GIÁO VIÊN / ADMIN';
+        } else {
+            tabStudent.className = 'py-2 rounded-lg bg-white dark:bg-slate-700 text-orange-600 dark:text-orange-400 shadow-sm transition-all text-center';
+            tabAdmin.className = 'py-2 rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 transition-all text-center';
+
+            lblUsername.textContent = 'Tên đăng nhập (Tên học sinh + Mã số riêng)';
+            usernameInput.placeholder = 'Ví dụ: NGUYENVANA001';
+            usernameInput.value = 'NGUYENVANA001';
+            hintUsername.innerHTML = 'Mã học sinh mẫu: <strong class="text-orange-500">NGUYENVANA001</strong>';
+
+            lblPassword.textContent = 'Mật khẩu (Mã số riêng do GV cấp)';
+            passwordInput.placeholder = 'Ví dụ: nbn4001';
+            passwordInput.value = 'nbn4001';
+            hintPassword.innerHTML = 'Mật khẩu mẫu: <strong class="text-orange-500">nbn4001</strong>';
+
+            btnSubmit.textContent = '🎓 ĐĂNG NHẬP HỌC VIÊN';
+        }
+    },
+
+    // Handle Auth Submit (Login Student / Login Admin / Register Lead)
     async handleAuthSubmit(e) {
         e.preventDefault();
-        const email = document.getElementById('authEmail').value;
-        const password = document.getElementById('authPassword').value;
 
-        if (supabase) {
-            if (this.state.authMode === 'register') {
-                const { data, error } = await supabase.auth.signUp({ email, password });
-                if (error) {
-                    alert(`Đăng ký Supabase: ${error.message}`);
-                } else {
-                    alert(`🎉 Đăng ký thành công trên Supabase! Vui lòng kiểm tra email xác nhận: ${email}`);
-                }
-            } else {
-                const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-                if (error) {
-                    alert(`Đăng nhập: ${error.message}`);
-                } else {
-                    alert(`✅ Đăng nhập thành công với Supabase! Chào mừng: ${email}`);
-                    this.updateUserUI(email);
+        if (this.state.authMode === 'register') {
+            // Register Lead Submission
+            const fullName = document.getElementById('regFullName').value;
+            const phone = document.getElementById('regPhone').value;
+            const grade = document.getElementById('regGrade').value;
+
+            if (!fullName || !phone) {
+                alert('Vui lòng điền đầy đủ Họ và tên và Số điện thoại!');
+                return;
+            }
+
+            const newLead = {
+                id: Date.now(),
+                name: fullName,
+                phone: phone,
+                grade: grade,
+                created_at: new Date().toLocaleString('vi-VN')
+            };
+
+            this.state.leads.unshift(newLead);
+
+            // Sync to Supabase Database
+            if (supabase) {
+                try {
+                    await supabase.from('leads').insert([{
+                        parent_name: fullName,
+                        phone: phone,
+                        grade: grade
+                    }]);
+                } catch (err) {
+                    console.warn('Sync notice:', err.message);
                 }
             }
-        } else {
-            alert(`✅ ${this.state.authMode === 'login' ? 'Đăng nhập' : 'Đăng ký'} thành công với: ${email}`);
-            this.updateUserUI(email);
+
+            alert(`🎉 ĐĂNG KÝ THÀNH CÔNG!\n\nCảm ơn ${fullName} (SĐT: ${phone}) đã đăng ký khóa học ${grade}.\nCô Thanh Hương sẽ liên hệ tư vấn trong vòng 15 phút!`);
+            this.closeAuthModal();
+            return;
         }
 
-        this.closeAuthModal();
+        // Login Mode Evaluation
+        const username = document.getElementById('authUsername').value.trim().toUpperCase();
+        const password = document.getElementById('authPassword').value.trim();
+
+        if (this.state.authRole === 'admin') {
+            // Check Admin Credentials: thanhhuongnbn84 / 246357
+            if (username === 'THANHHUONGNBN84' && password === '246357') {
+                alert('👑 ĐĂNG NHẬP GIÁO VIÊN / ADMIN THÀNH CÔNG!\n\nChào mừng Cô THANH HƯƠNG đến với Cổng Quản Lý Đăng Ký & Xuất File Excel.');
+                this.closeAuthModal();
+                this.updateUserUI('thanhhuongnbn84', 'Admin');
+                this.openAdminModal();
+            } else {
+                alert('❌ Tên đăng nhập hoặc mật khẩu Admin không đúng!\n\nTài khoản mặc định: thanhhuongnbn84 / Mật khẩu: 246357');
+            }
+        } else {
+            // Check Student Credentials (e.g. NGUYENVANA001 / nbn4001)
+            const matchedStudent = this.state.students.find(
+                s => s.username.toUpperCase() === username && s.code === password
+            );
+
+            if (matchedStudent) {
+                alert(`🎓 ĐĂNG NHẬP HỌC VIÊN THÀNH CÔNG!\n\nChào mừng em: ${matchedStudent.name} (${matchedStudent.grade}). Chúc em học tốt cùng Cô Thanh Hương!`);
+                this.closeAuthModal();
+                this.updateUserUI(matchedStudent.username, 'Student', matchedStudent.name);
+            } else {
+                alert('❌ Mã số đăng nhập học sinh không đúng!\n\nVui lòng sử dụng Username mẫu: NGUYENVANA001 và Mật khẩu: nbn4001');
+            }
+        }
     },
 
-    updateUserUI(email) {
+    // User Header UI Update
+    updateUserUI(username, role = 'Student', displayName = '') {
         const authContainer = document.getElementById('userAuthState');
         if (authContainer) {
-            authContainer.innerHTML = `
-                <div class="flex items-center gap-2 bg-slate-800 px-3 py-1 rounded border border-slate-700">
-                    <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
-                    <span class="text-xs font-bold text-amber-300">⚡ Supabase User: ${email.split('@')[0]}</span>
-                    <button onclick="app.handleSignOut()" class="text-[10px] text-slate-400 hover:text-rose-400 ml-1">Đăng xuất</button>
-                </div>
-            `;
+            if (role === 'Admin') {
+                authContainer.innerHTML = `
+                    <div class="flex items-center gap-2 bg-amber-950/80 border border-amber-500/50 px-3 py-1 rounded-xl">
+                        <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+                        <span class="text-xs font-bold text-amber-300">👑 Admin: thanhhuongnbn84</span>
+                        <button onclick="app.openAdminModal()" class="text-xs bg-amber-500 hover:bg-amber-600 text-white font-bold px-2 py-0.5 rounded shadow">Bảng Quản Lý</button>
+                        <button onclick="location.reload()" class="text-[10px] text-slate-400 hover:text-rose-400 ml-1">Thoát</button>
+                    </div>
+                `;
+            } else {
+                authContainer.innerHTML = `
+                    <div class="flex items-center gap-2 bg-orange-950/80 border border-orange-500/50 px-3 py-1 rounded-xl">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                        <span class="text-xs font-bold text-orange-300">🎓 ${displayName || username}</span>
+                        <button onclick="location.reload()" class="text-[10px] text-slate-400 hover:text-rose-400 ml-1">Đăng xuất</button>
+                    </div>
+                `;
+            }
         }
     },
 
-    async handleSignOut() {
-        if (supabase) {
-            await supabase.auth.signOut();
-        }
-        location.reload();
+    // ADMIN PORTAL & EXCEL EXPORT LOGIC
+    openAdminModal() {
+        const modal = document.getElementById('adminModal');
+        this.renderAdminLeads();
+        this.renderAdminStudents();
+        modal.classList.remove('hidden');
     },
 
-    // Supabase Lead Form Submission (Đăng ký học thử vào Supabase table 'leads')
+    closeAdminModal() {
+        const modal = document.getElementById('adminModal');
+        if (modal) modal.classList.add('hidden');
+    },
+
+    switchAdminTab(tabName) {
+        const tabLeads = document.getElementById('adminTabLeads');
+        const tabStudents = document.getElementById('adminTabStudents');
+        const tabCreate = document.getElementById('adminTabCreate');
+
+        const contentLeads = document.getElementById('adminContentLeads');
+        const contentStudents = document.getElementById('adminContentStudents');
+        const contentCreate = document.getElementById('adminContentCreate');
+
+        // Reset All
+        [tabLeads, tabStudents, tabCreate].forEach(t => t.className = 'px-4 py-2.5 border-b-2 border-transparent text-slate-400 hover:text-white');
+        [contentLeads, contentStudents, contentCreate].forEach(c => c.classList.add('hidden'));
+
+        if (tabName === 'students') {
+            tabStudents.className = 'px-4 py-2.5 border-b-2 border-cyan-500 text-cyan-400';
+            contentStudents.classList.remove('hidden');
+        } else if (tabName === 'create') {
+            tabCreate.className = 'px-4 py-2.5 border-b-2 border-amber-500 text-amber-400';
+            contentCreate.classList.remove('hidden');
+        } else {
+            tabLeads.className = 'px-4 py-2.5 border-b-2 border-orange-500 text-orange-400';
+            contentLeads.classList.remove('hidden');
+        }
+    },
+
+    // Render Leads List in Admin Table
+    renderAdminLeads() {
+        const tbody = document.getElementById('adminLeadsTableBody');
+        const statLeads = document.getElementById('statTotalLeads');
+
+        statLeads.textContent = this.state.leads.length;
+
+        if (this.state.leads.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-500">Chưa có lượt đăng ký nào.</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = this.state.leads.map((item, idx) => `
+            <tr class="hover:bg-slate-800/50 transition-colors">
+                <td class="p-3 font-mono text-slate-400">${idx + 1}</td>
+                <td class="p-3 font-bold text-white">${item.name}</td>
+                <td class="p-3 font-mono text-orange-400">${item.phone}</td>
+                <td class="p-3"><span class="px-2 py-0.5 bg-orange-500/20 text-orange-300 rounded border border-orange-500/30 text-[11px] font-bold">${item.grade}</span></td>
+                <td class="p-3 text-slate-400">${item.created_at}</td>
+                <td class="p-3">
+                    <a href="tel:${item.phone}" class="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold rounded transition-colors inline-flex items-center gap-1">
+                        📞 Gọi Ngay
+                    </a>
+                </td>
+            </tr>
+        `).join('');
+    },
+
+    // Render Student Codes List in Admin Table
+    renderAdminStudents() {
+        const tbody = document.getElementById('adminStudentsTableBody');
+        const statStudents = document.getElementById('statTotalStudents');
+
+        statStudents.textContent = this.state.students.length;
+
+        tbody.innerHTML = this.state.students.map((st, idx) => `
+            <tr class="hover:bg-slate-800/50 transition-colors">
+                <td class="p-3 text-slate-400">${idx + 1}</td>
+                <td class="p-3 font-bold text-white">${st.name}</td>
+                <td class="p-3 text-orange-400 font-bold">${st.username}</td>
+                <td class="p-3 text-cyan-400 font-bold">${st.code}</td>
+                <td class="p-3">${st.grade}</td>
+                <td class="p-3"><span class="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 rounded text-[10px] font-bold">● ${st.status}</span></td>
+            </tr>
+        `).join('');
+    },
+
+    // Generate New Student Code
+    handleCreateStudentCode(e) {
+        e.preventDefault();
+        const nameInput = document.getElementById('newStudentName');
+        const gradeInput = document.getElementById('newStudentGrade');
+
+        const name = nameInput.value.trim();
+        const grade = gradeInput.value;
+
+        if (!name) return;
+
+        // Auto Generate Username: E.g., HOANGMINHTRI004
+        const count = this.state.students.length + 1;
+        const codeNum = String(count).padStart(3, '0');
+        const cleanName = name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z]/g, "").toUpperCase();
+        const username = `${cleanName}${codeNum}`;
+        const passwordCode = `nbn4${codeNum}`;
+
+        const newStudent = {
+            id: Date.now(),
+            name: name,
+            username: username,
+            code: passwordCode,
+            grade: grade,
+            status: 'Hoạt động'
+        };
+
+        this.state.students.unshift(newStudent);
+        this.renderAdminStudents();
+
+        alert(`🎉 TẠO MÃ SỐ HỌC SINH THÀNH CÔNG!\n\n• Họ tên: ${name}\n• Tên đăng nhập: ${username}\n• Mật khẩu mã riêng: ${passwordCode}\n• Khối lớp: ${grade}`);
+        nameInput.value = '';
+        this.switchAdminTab('students');
+    },
+
+    // EXPORT LEADS TO EXCEL (.xlsx)
+    exportLeadsExcel() {
+        if (typeof XLSX === 'undefined') {
+            alert('Đang tải thư viện Excel, vui lòng thử lại sau 2 giây!');
+            return;
+        }
+
+        const excelData = this.state.leads.map((item, idx) => ({
+            'STT': idx + 1,
+            'Họ và Tên Phụ Huynh/Học Sinh': item.name,
+            'Số Điện Thoại Zalo': item.phone,
+            'Lớp Đăng Ký': item.grade,
+            'Thời Gian Đăng Ký': item.created_at,
+            'Trạng Thái': 'Chờ tư vấn'
+        }));
+
+        const worksheet = XLSX.utils.json_to_sheet(excelData);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Danh_Sach_Dang_Ky");
+
+        // Save File .xlsx
+        XLSX.writeFile(workbook, `Danh_Sach_Dang_Ky_Hoc_Thu_MathX_${new Date().toISOString().slice(0,10)}.xlsx`);
+    },
+
+    // EXPORT STUDENT CODES TO EXCEL (.xlsx)
+    exportStudentsExcel() {
+        if (typeof XLSX === 'undefined') {
+            alert('Đang tải thư viện Excel, vui lòng thử lại sau 2 giây!');
+            return;
+        }
+
+        const excelData = this.state.students.map((st, idx) => ({
+            'STT': idx + 1,
+            'Họ và Tên Học Sinh': st.name,
+            'Tên Đăng Nhập (Username)': st.username,
+            'Mật Khẩu (Mã Số Riêng)': st.code,
+            'Khối Lớp': st.grade,
+            'Trạng Thái': st.status
+        }));
+
+        const worksheet = XLSX.utils.json_to_sheet(excelData);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Ma_So_Hoc_Sinh");
+
+        // Save File .xlsx
+        XLSX.writeFile(workbook, `Danh_Sach_Ma_So_Hoc_Sinh_MathX_${new Date().toISOString().slice(0,10)}.xlsx`);
+    },
+
+    // Form Handlers
     async handleLeadForm(e) {
         e.preventDefault();
         const form = e.target;
         const parentName = form.querySelector('input[type="text"]').value;
         const phone = form.querySelector('input[type="tel"]').value;
         const grade = form.querySelector('select').value;
-        const note = form.querySelector('textarea').value;
+
+        const newLead = {
+            id: Date.now(),
+            name: parentName,
+            phone: phone,
+            grade: grade,
+            created_at: new Date().toLocaleString('vi-VN')
+        };
+
+        this.state.leads.unshift(newLead);
 
         if (supabase) {
             try {
-                const { data, error } = await supabase.from('leads').insert([{
+                await supabase.from('leads').insert([{
                     parent_name: parentName,
                     phone: phone,
-                    grade: grade,
-                    note: note
+                    grade: grade
                 }]);
-
-                if (error) {
-                    console.warn('Notice inserting into Supabase leads table:', error.message);
-                } else {
-                    console.log('⚡ Successfully saved Lead to Supabase Database!');
-                }
             } catch (err) {
-                console.warn('Supabase Lead sync notice:', err.message);
+                console.warn('Supabase lead notice:', err.message);
             }
         }
 
-        alert('🎉 Đăng ký học thử thành công! Dữ liệu đã được lưu trực tiếp vào Supabase. Bộ phận tư vấn MATHX sẽ liên hệ với Phụ huynh trong vòng 15 phút.');
+        alert(`🎉 ĐĂNG KÝ HỌC THỬ THÀNH CÔNG!\n\nDữ liệu đã được lưu trực tiếp vào Supabase & Hệ thống Quản Lý của Cô Thanh Hương.`);
         form.reset();
     },
 
-    // Supabase Newsletter Submission (Đăng ký newsletter vào Supabase)
     async handleNewsletter(e) {
         e.preventDefault();
         const form = e.target;
@@ -337,24 +634,18 @@ const app = {
         if (supabase) {
             try {
                 await supabase.from('newsletter_subscribers').insert([{ email }]);
-                console.log('⚡ Saved Newsletter Subscriber to Supabase');
-            } catch (err) {
-                console.warn('Supabase Subscriber notice:', err.message);
-            }
+            } catch (err) {}
         }
 
-        alert('📧 Cảm ơn bạn! Email đã được đăng ký trên Supabase. Hệ thống đã gửi bộ đề thi Toán tư duy vào email của bạn.');
+        alert('📧 Cảm ơn bạn! Email đã được ghi nhận trên Supabase. Đề thi mẫu sẽ được gửi vào email của bạn.');
         form.reset();
     },
 
-    // Quick Search Filter
     handleSearch(query) {
         const q = query.toLowerCase().trim();
         const cards = document.querySelectorAll('#gradeCardsGrid .grade-card');
-
         cards.forEach(card => {
-            const text = card.textContent.toLowerCase();
-            if (text.includes(q)) {
+            if (card.textContent.toLowerCase().includes(q)) {
                 card.style.display = 'flex';
             } else {
                 card.style.display = 'none';
@@ -362,7 +653,6 @@ const app = {
         });
     },
 
-    // Curriculum Helper
     viewCurriculum(gradeCategory) {
         const gradeNames = {
             'mam-non': 'Chương trình Toán Mầm Nông (4 - 5 tuổi)',
@@ -381,9 +671,7 @@ const app = {
 
     scrollToSection(id) {
         const el = document.getElementById(id);
-        if (el) {
-            el.scrollIntoView({ behavior: 'smooth' });
-        }
+        if (el) el.scrollIntoView({ behavior: 'smooth' });
     }
 };
 
