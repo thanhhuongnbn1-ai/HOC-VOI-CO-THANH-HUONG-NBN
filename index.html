@@ -1077,9 +1077,31 @@
                 </div>
 
                 <button type="submit" id="btnAuthSubmit" class="w-full py-3 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-extrabold text-xs rounded-xl shadow-lg transition-all">
-                    ĐĂNG NHẬP HỌC VIÊN
+                    HOÀN THÀNH
                 </button>
             </form>
+        </div>
+    </div>
+
+    <!-- Modal 5: Welcome Toast Banner Modal ("Chúc mừng bạn đến với lớp học cô Thanh Hương") -->
+    <div id="welcomeBannerModal" class="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md hidden flex items-center justify-center p-4">
+        <div class="bg-gradient-to-br from-orange-500 via-amber-500 to-emerald-500 p-1 rounded-3xl max-w-md w-full shadow-2xl">
+            <div class="bg-slate-900 rounded-[22px] p-6 text-center space-y-4 text-white">
+                <div class="w-16 h-16 rounded-full bg-orange-500/20 border-2 border-orange-400 flex items-center justify-center mx-auto text-3xl animate-bounce">
+                    🎉
+                </div>
+                <h3 class="font-display font-black text-xl bg-gradient-to-r from-orange-400 via-amber-300 to-emerald-400 bg-clip-text text-transparent">
+                    Chúc mừng bạn đến với lớp học cô Thanh Hương
+                </h3>
+                <p id="welcomeBannerSubtitle" class="text-xs text-slate-300 leading-relaxed font-medium">
+                    Đang mở khoá học đã đăng ký...
+                </p>
+                <div class="pt-2">
+                    <button onclick="app.closeWelcomeBanner()" class="px-6 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-extrabold text-xs rounded-xl shadow-lg transition-all">
+                        VÀO LỚP HỌC NGAY
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 
