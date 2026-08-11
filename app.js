@@ -376,7 +376,7 @@ const app = {
     },
 
     openDemoVideo() {
-        alert('🎬 Đang mở Video Giảng Dạy Tương Tác 1-1 mẫu của Thầy Trần Hữu Hiếu trên MATHX...');
+        alert('🎬 Đang mở Video Giảng Dạy Tương Tác 1-1 mẫu của Cô Thanh Hương trên MATHX...');
     },
 
     scrollToSection(id) {
